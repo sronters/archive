@@ -1,0 +1,1 @@
+"""MedArchive FastAPI application."""

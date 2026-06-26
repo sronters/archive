@@ -1,0 +1,15 @@
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.pyc
+.local_storage/
+node_modules/
+.next/
+tsconfig.tsbuildinfo
+dist/
+coverage/
+.DS_Store
+*.log
