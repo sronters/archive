@@ -9,6 +9,7 @@ from medarchive_application.document_processing import (
     DocumentProcessingService,
     DocumentToProcess,
 )
+from medarchive_document_parsers.pdf import ExtractedPdfPriceRow, ParsedPdfDocument
 from medarchive_document_parsers.xlsx import ExtractedXlsxPriceRow, ParsedWorkbook
 from medarchive_infrastructure.storage import LocalFileStorage
 
@@ -137,6 +138,34 @@ async def test_document_processing_supports_text_pdf_rows(tmp_path: Path) -> Non
     assert repository.saved_items[0][1][0].raw_payload["page_number"] == 1
 
 
+@pytest.mark.asyncio
+async def test_document_processing_falls_back_to_ocr_for_scanned_pdf(tmp_path: Path) -> None:
+    document_id = uuid4()
+    storage = LocalFileStorage(tmp_path)
+    storage_key = "originals/test/scanned.pdf"
+    await storage.upload(storage_key, BytesIO(build_text_pdf(["image only"])), "application/pdf")
+    repository = FakeDocumentProcessingRepository(
+        DocumentToProcess(
+            document_id=document_id,
+            detected_format="pdf",
+            storage_key=storage_key,
+        )
+    )
+    service = DocumentProcessingService(
+        file_storage=storage,
+        repository=repository,
+        pdf_parser=_EmptyPdfParser(),
+        pdf_ocr_parser=_FakePdfOcrParser(),
+    )
+
+    result = await service.process_document(document_id)
+
+    assert result.extracted_item_count == 1
+    assert repository.created_runs[0].parser_name == "pdf-ocr-adapter"
+    assert repository.saved_items[0][1][0].raw_payload["source"] == "pdf"
+    assert repository.saved_items[0][1][0].raw_payload["warnings"] == ["ocr_low_confidence"]
+
+
 class _FakeXlsParser:
     parser_name = "xls-xlrd"
     parser_version = "0.1.0"
@@ -152,6 +181,37 @@ class _FakeXlsParser:
                     resident_price_raw="25000",
                     nonresident_price_raw="32000",
                     currency_raw="KZT",
+                ),
+            )
+        )
+
+
+class _EmptyPdfParser:
+    parser_name = "pdf-pymupdf-text"
+    parser_version = "0.1.0"
+
+    def parse(self, content: bytes) -> ParsedPdfDocument:
+        assert content.startswith(b"%PDF")
+        return ParsedPdfDocument(rows=())
+
+
+class _FakePdfOcrParser:
+    parser_name = "pdf-ocr-adapter"
+    parser_version = "0.1.0"
+
+    def parse(self, content: bytes) -> ParsedPdfDocument:
+        assert content.startswith(b"%PDF")
+        return ParsedPdfDocument(
+            rows=(
+                ExtractedPdfPriceRow(
+                    page_number=1,
+                    line_number=1,
+                    bbox=(1.0, 2.0, 3.0, 4.0),
+                    service_name_raw="MRI brain",
+                    resident_price_raw="25000",
+                    nonresident_price_raw="32000",
+                    currency_raw="KZT",
+                    warnings=("ocr_low_confidence",),
                 ),
             )
         )

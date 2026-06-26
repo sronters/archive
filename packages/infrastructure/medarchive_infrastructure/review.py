@@ -5,6 +5,7 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 from uuid import UUID
 
+from medarchive_application.graph_projection import PRICE_VERSION_PUBLISHED
 from medarchive_application.review_preparation import (
     ExtractedItemForReview,
     ReviewDocumentContext,
@@ -25,6 +26,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from medarchive_infrastructure.models import (
     AuditEventModel,
     ExtractedPriceItemModel,
+    OutboxEventModel,
     PriceDocumentModel,
     PriceVersionModel,
     ProcessingRunModel,
@@ -436,6 +438,18 @@ def _publish_price_version(
     )
     session.add(published)
     session.flush()
+    session.add(
+        OutboxEventModel(
+            event_type=PRICE_VERSION_PUBLISHED,
+            event_version=1,
+            payload={
+                "partner_id": str(context.document.partner_id),
+                "service_id": str(service_id),
+                "price_version_id": str(published.id),
+                "document_id": str(context.document.id),
+            },
+        )
+    )
     context.document.status = "PUBLISHED"
     return published.id
 

@@ -13,6 +13,10 @@ class WorkerSettings(BaseSettings):
     remote_service_catalog_url: str = "http://localhost:8000/mock/service-catalog"
     remote_partner_catalog_url: str = "http://localhost:8000/mock/partners"
     remote_catalog_bearer_token: str | None = None
+    ocr_endpoint_url: str | None = None
+    ocr_bearer_token: str | None = None
+    graph_backend: str = "postgres_edges"
+    graph_name: str = "medarchive"
 
 
 def get_worker_settings() -> WorkerSettings:

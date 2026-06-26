@@ -9,7 +9,7 @@ COPY pyproject.toml README.md ./
 COPY apps ./apps
 COPY packages ./packages
 
-RUN pip install --no-cache-dir ".[dev]"
+RUN pip install --no-cache-dir ".[dev,parsers]"
 
 ENV PYTHONPATH=/app/apps/worker:/app/packages/domain:/app/packages/application:/app/packages/infrastructure:/app/packages/shared
 

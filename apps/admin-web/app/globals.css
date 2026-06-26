@@ -226,6 +226,14 @@ label {
   margin-top: 12px;
 }
 
+.graphCanvas {
+  height: 360px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-top: 12px;
+  background: #f8fafc;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

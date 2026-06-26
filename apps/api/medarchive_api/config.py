@@ -18,6 +18,14 @@ class Settings(BaseSettings):
         "dev-operator:operator,viewer;"
         "dev-integration:integration_client"
     )
+    bearer_tokens: str = (
+        "dev-oidc-admin:administrator,catalog_manager,senior_operator,operator,auditor,viewer;"
+        "dev-oauth-integration:integration_client"
+    )
+    trusted_proxy_subject_header: str = "X-Forwarded-User"
+    trusted_proxy_roles_header: str = "X-Forwarded-Roles"
+    graph_backend: str = "postgres_edges"
+    graph_name: str = "medarchive"
     malware_scanner_mode: str = "not_configured"
     local_storage_root: str = ".local_storage"
     max_upload_file_bytes: int = 50 * 1024 * 1024

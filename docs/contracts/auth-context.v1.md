@@ -75,3 +75,9 @@ GET  /api/v1/exports/price-versions         integration_client, administrator, a
 ```
 
 Health and readiness endpoints remain unauthenticated so orchestrators can check liveness without application credentials.
+
+## Integrated Modes
+
+- `local_jwt` and `api_key` use `X-API-Key` and the `LOCAL_API_KEYS` role map.
+- `oidc` and `oauth2_client_credentials` use `Authorization: Bearer <token>` and the configured `BEARER_TOKENS` role map in local/integration deployments. Production deployments replace this adapter with company token validation or introspection without changing route policy.
+- `trusted_reverse_proxy` accepts `X-Forwarded-User` and `X-Forwarded-Roles` only from the trusted ingress layer configured by deployment.

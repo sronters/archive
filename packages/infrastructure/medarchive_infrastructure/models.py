@@ -38,6 +38,24 @@ class PartnerModel(Base, TimestampMixin):
     is_active: Mapped[bool] = mapped_column(default=True)
 
 
+class PartnerProfileModel(Base, TimestampMixin):
+    __tablename__ = "partner_profiles"
+
+    id = uuid_pk()
+    partner_id: Mapped[PyUUID] = mapped_column(ForeignKey("partners.id"), index=True, unique=True)
+    profile_version: Mapped[int] = mapped_column(Integer, default=1)
+    layout_signature: Mapped[str] = mapped_column(String(256))
+    sheet_name: Mapped[str | None] = mapped_column(String(256))
+    header_row_index: Mapped[int | None] = mapped_column(Integer)
+    service_column: Mapped[str | None] = mapped_column(String(32))
+    service_code_column: Mapped[str | None] = mapped_column(String(32))
+    resident_price_column: Mapped[str | None] = mapped_column(String(32))
+    nonresident_price_column: Mapped[str | None] = mapped_column(String(32))
+    normalization_rules: Mapped[dict[str, object]] = mapped_column(JSONB, default=dict)
+    learned_from_document_id: Mapped[PyUUID | None] = mapped_column(PgUUID(as_uuid=True))
+    approved_by: Mapped[PyUUID] = mapped_column(PgUUID(as_uuid=True))
+
+
 class ServiceModel(Base, TimestampMixin):
     __tablename__ = "services"
 
@@ -194,8 +212,13 @@ class OutboxEventModel(Base):
     event_type: Mapped[str] = mapped_column(String(256), index=True)
     event_version: Mapped[int] = mapped_column(Integer, default=1)
     payload: Mapped[dict[str, object]] = mapped_column(JSONB)
+    status: Mapped[str] = mapped_column(String(64), default="pending", index=True)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     attempts: Mapped[int] = mapped_column(Integer, default=0)
+    last_error: Mapped[str | None] = mapped_column(Text)
+    next_retry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    processing_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -215,3 +238,32 @@ class WebhookDeliveryModel(Base):
     error: Mapped[str | None] = mapped_column(Text)
     next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class GraphNodeModel(Base, TimestampMixin):
+    __tablename__ = "graph_nodes"
+
+    node_id: Mapped[str] = mapped_column(String(256), primary_key=True)
+    node_type: Mapped[str] = mapped_column(String(64), index=True)
+    entity_id: Mapped[PyUUID | None] = mapped_column(PgUUID(as_uuid=True), index=True)
+    external_id: Mapped[str | None] = mapped_column(String(256), index=True)
+    label: Mapped[str] = mapped_column(String(1024))
+    properties: Mapped[dict[str, object]] = mapped_column(JSONB, default=dict)
+
+
+class GraphEdgeModel(Base, TimestampMixin):
+    __tablename__ = "graph_edges"
+    __table_args__ = (
+        UniqueConstraint(
+            "source_node_id",
+            "target_node_id",
+            "edge_type",
+            name="uq_graph_edges_source_target_type",
+        ),
+    )
+
+    id = uuid_pk()
+    source_node_id: Mapped[str] = mapped_column(String(256), index=True)
+    target_node_id: Mapped[str] = mapped_column(String(256), index=True)
+    edge_type: Mapped[str] = mapped_column(String(128), index=True)
+    properties: Mapped[dict[str, object]] = mapped_column(JSONB, default=dict)

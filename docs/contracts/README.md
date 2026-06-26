@@ -17,6 +17,7 @@ Contract versioning rules:
 - [Document Ingestion](document-ingestion.v1.md)
 - [Verified Price Publication](price-publication.v1.md)
 - [Webhook Events](webhook-events.v1.md)
+- [Graph Read Model](graph-read-model.v1.md)
 - [Exports](exports.v1.md)
 - [Authentication Context](auth-context.v1.md)
 - [Processing Outbox](processing-outbox.v1.md)

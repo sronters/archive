@@ -10,6 +10,7 @@ from medarchive_document_parsers.xlsx import (
     _detect_columns,
     _detect_currency,
     _detect_header_row,
+    _SheetRow,
 )
 
 
@@ -34,22 +35,22 @@ class XlsParser:
             if header_index is None:
                 warnings.append(f"{sheet.name}: header row not detected")
                 continue
-            columns = _detect_columns(table[header_index])
+            columns = _detect_columns(table[header_index].cells)
             if columns.service_index is None:
                 warnings.append(f"{sheet.name}: service column not detected")
                 continue
-            for row_index, row in enumerate(table[header_index + 1 :], start=header_index + 2):
-                service = _cell(row, columns.service_index).strip()
+            for sheet_row in table[header_index + 1 :]:
+                service = _cell(sheet_row.cells, columns.service_index).strip()
                 if not service:
                     continue
-                resident = _cell_optional(row, columns.resident_price_index)
-                nonresident = _cell_optional(row, columns.nonresident_price_index)
+                resident = _cell_optional(sheet_row.cells, columns.resident_price_index)
+                nonresident = _cell_optional(sheet_row.cells, columns.nonresident_price_index)
                 if resident is None and nonresident is None:
                     continue
                 extracted.append(
                     ExtractedXlsxPriceRow(
                         sheet_name=sheet.name,
-                        row_number=row_index,
+                        row_number=sheet_row.row_number,
                         service_name_raw=service,
                         resident_price_raw=resident,
                         nonresident_price_raw=nonresident,
@@ -59,12 +60,15 @@ class XlsParser:
         return ParsedWorkbook(rows=tuple(extracted), warnings=tuple(warnings))
 
 
-def _sheet_table(sheet: Any) -> list[list[str]]:
+def _sheet_table(sheet: Any) -> list[_SheetRow]:
     return [
-        [
-            _cell_value(sheet.cell_value(row_index, column_index))
-            for column_index in range(sheet.ncols)
-        ]
+        _SheetRow(
+            row_number=row_index + 1,
+            cells=[
+                _cell_value(sheet.cell_value(row_index, column_index))
+                for column_index in range(sheet.ncols)
+            ],
+        )
         for row_index in range(sheet.nrows)
     ]
 

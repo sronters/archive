@@ -14,9 +14,12 @@ from medarchive_application.document_processing import (
     ExtractedItemDraft,
     ProcessingRunDraft,
 )
+from medarchive_application.evidence import PriceEvidence
+from medarchive_application.graph_projection import PriceVersionGraphProjection
 from medarchive_application.ingestion import IngestionBatchResult
 from medarchive_application.ingestion_orchestrator import RecordedDocument, RecordedIngestionBatch
 from medarchive_application.outbox import PendingOutboxEvent
+from medarchive_application.partner_profiles import PartnerProfile, PartnerProfileDraft
 from medarchive_application.price_versions import PriceVersionRead
 from medarchive_application.review_preparation import (
     ExtractedItemForReview,
@@ -30,6 +33,8 @@ from medarchive_application.review_tasks import (
     ReviewTaskConflictError,
     ReviewTaskSummary,
 )
+from medarchive_application.search import PartnerSearchResult, ServiceSearchResult
+from medarchive_domain.ports import GraphNeighborhood, GraphNode
 from medarchive_matching.simple_matcher import CatalogService
 
 
@@ -73,17 +78,31 @@ class FakeTaskDispatcher:
 class FakeOutboxRepository:
     def __init__(self, events: tuple[PendingOutboxEvent, ...]) -> None:
         self.events = events
+        self.processing: list[UUID] = []
         self.published: list[UUID] = []
         self.attempted: list[UUID] = []
+        self.retry_errors: list[str] = []
 
     def list_unpublished(self, *, limit: int) -> tuple[PendingOutboxEvent, ...]:
         return self.events[:limit]
 
+    def mark_processing(self, event_id: UUID) -> None:
+        self.processing.append(event_id)
+
     def mark_published(self, event_id: UUID) -> None:
         self.published.append(event_id)
 
-    def increment_attempts(self, event_id: UUID) -> None:
+    def mark_retry(
+        self,
+        event_id: UUID,
+        *,
+        error: str,
+        next_retry_at: datetime | None,
+        max_attempts: int,
+    ) -> None:
+        del next_retry_at, max_attempts
         self.attempted.append(event_id)
+        self.retry_errors.append(error)
 
 
 class FakeDocumentProcessingRepository(DocumentProcessingRepository):
@@ -382,3 +401,194 @@ def _catalog_counts(
     updated = len(records) - created
     deactivated = sum(1 for record in records if not record.is_active)
     return created, updated, deactivated
+
+
+class FakeSearchRepository:
+    def __init__(self) -> None:
+        self.service_filters: dict[str, object] = {}
+        self.partner_filters: dict[str, object] = {}
+        self.service_id = uuid4()
+        self.partner_id = uuid4()
+
+    def search_services(
+        self,
+        *,
+        query: str | None,
+        category: str | None,
+        is_active: bool | None,
+        limit: int,
+        offset: int,
+    ) -> tuple[ServiceSearchResult, ...]:
+        self.service_filters = {
+            "query": query,
+            "category": category,
+            "is_active": is_active,
+            "limit": limit,
+            "offset": offset,
+        }
+        return (
+            ServiceSearchResult(
+                service_id=self.service_id,
+                external_service_id="svc-001",
+                official_name="MRI brain",
+                category="diagnostics",
+                is_active=True,
+            ),
+        )
+
+    def search_partners(
+        self,
+        *,
+        query: str | None,
+        city: str | None,
+        is_active: bool | None,
+        limit: int,
+        offset: int,
+    ) -> tuple[PartnerSearchResult, ...]:
+        self.partner_filters = {
+            "query": query,
+            "city": city,
+            "is_active": is_active,
+            "limit": limit,
+            "offset": offset,
+        }
+        return (
+            PartnerSearchResult(
+                partner_id=self.partner_id,
+                external_partner_id="clinic-001",
+                name="Medical Center",
+                bin="123456789012",
+                city="Astana",
+                is_active=True,
+            ),
+        )
+
+
+class FakeEvidenceRepository:
+    def __init__(self, evidence: PriceEvidence) -> None:
+        self.evidence = evidence
+
+    def get_price_evidence(self, extracted_item_id: UUID) -> PriceEvidence:
+        if extracted_item_id != self.evidence.extracted_item_id:
+            raise LookupError(extracted_item_id)
+        return self.evidence
+
+
+class FakePartnerProfileRepository:
+    def __init__(self) -> None:
+        self.profiles: dict[UUID, PartnerProfile] = {}
+
+    def save_confirmed_profile(self, draft: PartnerProfileDraft) -> PartnerProfile:
+        current = self.profiles.get(draft.partner_id)
+        version = 1 if current is None else current.profile_version + 1
+        profile = PartnerProfile(profile_version=version, **draft.__dict__)
+        self.profiles[draft.partner_id] = profile
+        return profile
+
+    def get_partner_profile(self, partner_id: UUID) -> PartnerProfile | None:
+        return self.profiles.get(partner_id)
+
+
+class FakeGraphRepository:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, tuple[object, ...]]] = []
+        service_id = uuid4()
+        self.neighborhood = GraphNeighborhood(
+            nodes=(
+                GraphNode(
+                    node_id=f"Service:{service_id}",
+                    node_type="Service",
+                    entity_id=service_id,
+                    external_id="svc-001",
+                    label="MRI brain",
+                    properties={"category": "diagnostics"},
+                ),
+            ),
+            edges=(),
+        )
+
+    async def clear(self) -> None:
+        self.calls.append(("clear", ()))
+
+    async def upsert_partner(
+        self,
+        partner_id: UUID,
+        external_partner_id: str | None,
+        name: str,
+    ) -> None:
+        self.calls.append(("upsert_partner", (partner_id, external_partner_id, name)))
+
+    async def upsert_service(
+        self,
+        service_id: UUID,
+        external_service_id: str | None,
+        name: str,
+        category: str | None,
+    ) -> None:
+        self.calls.append(("upsert_service", (service_id, external_service_id, name, category)))
+
+    async def connect_partner_service(self, partner_id: UUID, service_id: UUID) -> None:
+        self.calls.append(("connect_partner_service", (partner_id, service_id)))
+
+    async def upsert_price_document(
+        self,
+        document_id: UUID,
+        external_source_id: str | None,
+        label: str,
+    ) -> None:
+        self.calls.append(("upsert_price_document", (document_id, external_source_id, label)))
+
+    async def upsert_price_version(
+        self,
+        price_version_id: UUID,
+        service_id: UUID,
+        document_id: UUID,
+        status: str,
+    ) -> None:
+        self.calls.append(
+            ("upsert_price_version", (price_version_id, service_id, document_id, status))
+        )
+
+    async def connect_price_version_superseded(
+        self,
+        old_price_version_id: UUID,
+        new_price_version_id: UUID,
+    ) -> None:
+        self.calls.append(
+            ("connect_price_version_superseded", (old_price_version_id, new_price_version_id))
+        )
+
+    async def connect_raw_name_to_service(
+        self,
+        raw_name: str,
+        partner_id: UUID,
+        service_id: UUID,
+        confidence: float,
+        confirmed: bool,
+    ) -> None:
+        self.calls.append(
+            (
+                "connect_raw_name_to_service",
+                (raw_name, partner_id, service_id, confidence, confirmed),
+            )
+        )
+
+    async def get_service_neighborhood(self, service_id: UUID, depth: int) -> GraphNeighborhood:
+        self.calls.append(("get_service_neighborhood", (service_id, depth)))
+        return self.neighborhood
+
+
+class FakeGraphProjectionRepository:
+    def __init__(self, projection: PriceVersionGraphProjection) -> None:
+        self.projection = projection
+
+    def get_price_version_projection(
+        self,
+        price_version_id: UUID,
+    ) -> PriceVersionGraphProjection:
+        if price_version_id != self.projection.price_version_id:
+            raise LookupError(price_version_id)
+        return self.projection
+
+    def list_published_price_version_ids(self) -> tuple[UUID, ...]:
+        return (self.projection.price_version_id,)

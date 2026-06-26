@@ -5,7 +5,7 @@ from typing import Protocol
 from uuid import UUID
 
 from medarchive_document_parsers.docx import DocxParser
-from medarchive_document_parsers.pdf import PdfTextParser
+from medarchive_document_parsers.pdf import ParsedPdfDocument, PdfTextParser
 from medarchive_document_parsers.xls import XlsParser
 from medarchive_document_parsers.xlsx import ParsedWorkbook, XlsxParser
 from medarchive_domain.ports import FileStorage
@@ -77,6 +77,14 @@ class WorkbookParser(Protocol):
         ...
 
 
+class PdfParser(Protocol):
+    parser_name: str
+    parser_version: str
+
+    def parse(self, content: bytes) -> ParsedPdfDocument:
+        ...
+
+
 class DocumentProcessingService:
     pipeline_version = "document-processing-0.1.0"
 
@@ -89,7 +97,8 @@ class DocumentProcessingService:
         xlsx_parser: WorkbookParser | None = None,
         xls_parser: WorkbookParser | None = None,
         docx_parser: DocxParser | None = None,
-        pdf_parser: PdfTextParser | None = None,
+        pdf_parser: PdfParser | None = None,
+        pdf_ocr_parser: PdfParser | None = None,
     ) -> None:
         self._file_storage = file_storage
         self._repository = repository
@@ -98,6 +107,7 @@ class DocumentProcessingService:
         self._xls_parser = xls_parser or XlsParser()
         self._docx_parser = docx_parser or DocxParser()
         self._pdf_parser = pdf_parser or PdfTextParser()
+        self._pdf_ocr_parser = pdf_ocr_parser
 
     async def process_document(self, document_id: UUID) -> DocumentProcessingResult:
         document = self._repository.get_document_to_process(document_id)
@@ -207,9 +217,15 @@ class DocumentProcessingService:
                 ),
             )
         parsed_pdf = self._pdf_parser.parse(content)
+        parser_name = self._pdf_parser.parser_name
+        parser_version = self._pdf_parser.parser_version
+        if not parsed_pdf.rows and self._pdf_ocr_parser is not None:
+            parsed_pdf = self._pdf_ocr_parser.parse(content)
+            parser_name = self._pdf_ocr_parser.parser_name
+            parser_version = self._pdf_ocr_parser.parser_version
         return (
-            self._pdf_parser.parser_name,
-            self._pdf_parser.parser_version,
+            parser_name,
+            parser_version,
             tuple(
                 ExtractedItemDraft(
                     sheet_name=None,

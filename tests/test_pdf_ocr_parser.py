@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from medarchive_document_parsers.pdf_ocr import OcrTextLine, PdfOcrParser
+from medarchive_document_parsers.pdf_ocr import OcrTextLine, PdfOcrParser, _parse_http_ocr_lines
 
 from tests.fixtures_pdf import build_text_pdf
 
@@ -25,6 +25,26 @@ def test_pdf_ocr_parser_requires_configured_engine() -> None:
 
     with pytest.raises(RuntimeError, match="OCR engine is not configured"):
         parser.parse(build_text_pdf(["scanned placeholder"]))
+
+
+def test_http_ocr_response_parser_validates_lines() -> None:
+    lines = _parse_http_ocr_lines(
+        {
+            "lines": [
+                {
+                    "line_number": 7,
+                    "text": "MRI brain 25000 32000",
+                    "bbox": [1, 2, 3, 4],
+                    "confidence": 0.99,
+                }
+            ]
+        },
+        page_number=3,
+    )
+
+    assert lines[0].page_number == 3
+    assert lines[0].line_number == 7
+    assert lines[0].bbox == (1.0, 2.0, 3.0, 4.0)
 
 
 class _FakeOcrEngine:

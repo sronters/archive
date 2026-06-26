@@ -12,6 +12,7 @@ from medarchive_application.remote_catalog_sync import (
     ScheduledCatalogSyncRunner,
 )
 from medarchive_application.review_preparation import ReviewPreparationService
+from medarchive_document_parsers.pdf_ocr import HttpOcrEngine, PdfOcrParser
 from medarchive_infrastructure.catalog_import import SqlAlchemyCatalogImportRepository
 from medarchive_infrastructure.document_processing import SqlAlchemyDocumentProcessingRepository
 from medarchive_infrastructure.remote_catalog import (
@@ -37,6 +38,7 @@ def process_document(document_id: str) -> None:
         file_storage=LocalFileStorage(Path(settings.local_storage_root)),
         repository=SqlAlchemyDocumentProcessingRepository(session_factory),
         review_preparation_service=review_preparation,
+        pdf_ocr_parser=_ocr_parser(settings.ocr_endpoint_url, settings.ocr_bearer_token),
     )
     document_uuid = UUID(document_id)
     service_result = _run_async_document_processing(service, document_uuid)
@@ -74,3 +76,11 @@ def _run_async_document_processing(
     import asyncio
 
     return asyncio.run(service.process_document(document_id))
+
+
+def _ocr_parser(endpoint_url: str | None, bearer_token: str | None) -> PdfOcrParser | None:
+    if endpoint_url is None or not endpoint_url.strip():
+        return None
+    return PdfOcrParser(
+        ocr_engine=HttpOcrEngine(endpoint_url=endpoint_url.strip(), bearer_token=bearer_token),
+    )
