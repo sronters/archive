@@ -1,17 +1,13 @@
+import Link from "next/link";
+
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 const navItems = [
   ["dashboard", "Дашборд"],
   ["upload", "Загрузка"],
-  ["batches", "Пакеты"],
-  ["documents", "Документы"],
   ["runs", "Запуски"],
   ["review", "Ревью"],
-  ["catalog", "Справочник"],
-  ["partners", "Партнеры"],
   ["prices", "Цены"],
-  ["history", "История"],
-  ["exports", "Экспорт"],
   ["webhooks", "Вебхуки"],
   ["system", "Система"],
 ];
@@ -38,9 +34,9 @@ const priceRows = [
 ];
 
 const runRows = [
-  ["RUN-771", "Клиника 6 прайс 2026.xlsx", "xlsx-stdlib", "EXTRACTED", "5030 строк"],
-  ["RUN-772", "Клиника 1 прайс 2024.docx", "docx-ooxml-stdlib", "EXTRACTED", "2720 строк"],
-  ["RUN-773", "Клиника 2 прайс 2026.pdf", "pdf-text-adapter", "EXTRACTED", "200 строк"],
+  ["RUN-771", "Клиника 6 прайс 2026.xlsx", "xlsx-stdlib", "извлечено", "5030 строк"],
+  ["RUN-772", "Клиника 1 прайс 2024.docx", "docx-ooxml-stdlib", "извлечено", "2720 строк"],
+  ["RUN-773", "Клиника 2 прайс 2026.pdf", "pdf-text-adapter", "извлечено", "200 строк"],
 ];
 
 const webhookRows = [
@@ -60,6 +56,7 @@ export default function Page() {
               {label}
             </a>
           ))}
+          <Link href="/docs">Документация</Link>
         </nav>
       </aside>
       <section className="main">
@@ -69,6 +66,9 @@ export default function Page() {
             <p className="subtitle">{apiBaseUrl}/api/v1</p>
           </div>
           <div className="toolbarActions">
+            <Link className="buttonLink" href="/docs">
+              Документация
+            </Link>
             <button type="button">Повторить ошибки</button>
             <button type="button" className="primary">
               Экспорт цен

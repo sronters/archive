@@ -23,11 +23,13 @@ body {
 }
 
 button,
-input {
+input,
+.buttonLink {
   font: inherit;
 }
 
-button {
+button,
+.buttonLink {
   min-height: 34px;
   border: 1px solid var(--line-strong);
   border-radius: 6px;
@@ -35,6 +37,12 @@ button {
   color: var(--foreground);
   padding: 0 12px;
   cursor: pointer;
+}
+
+.buttonLink {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
 }
 
 button.primary {
@@ -45,6 +53,10 @@ button.primary {
 
 button:hover {
   border-color: var(--accent-dark);
+}
+
+a {
+  color: inherit;
 }
 
 input {
@@ -253,6 +265,141 @@ th {
   font-weight: 700;
 }
 
+.docsPage {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 28px 20px 48px;
+}
+
+.docsHeader {
+  margin-bottom: 18px;
+}
+
+.backLink {
+  color: var(--accent-dark);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.docsHeader h1 {
+  margin: 14px 0 10px;
+  font-size: 32px;
+  letter-spacing: 0;
+}
+
+.docsHeader p,
+.docsBlock p {
+  max-width: 840px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.docsGrid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 12px;
+}
+
+.docsBlock {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 18px;
+}
+
+.docsBlock h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+  letter-spacing: 0;
+}
+
+.docsBlock ul {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.docsBlock li {
+  line-height: 1.45;
+}
+
+.docsBlock li span {
+  display: block;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.docsStats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.docsStats div {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.docsStats dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.docsStats dd {
+  margin: 6px 0 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+pre {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #111827;
+  color: #f8fafc;
+  padding: 14px;
+  line-height: 1.5;
+}
+
+code {
+  font-family: Consolas, Monaco, monospace;
+}
+
+.endpointList {
+  display: grid;
+  gap: 8px;
+}
+
+.endpoint {
+  display: grid;
+  grid-template-columns: 70px minmax(180px, 1fr) 1.4fr;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.endpoint code {
+  color: var(--accent-dark);
+  font-weight: 700;
+}
+
+.endpoint span {
+  font-family: Consolas, Monaco, monospace;
+  font-size: 13px;
+}
+
+.endpoint p {
+  margin: 0;
+  font-size: 13px;
+}
+
 @media (max-width: 980px) {
   .shell {
     grid-template-columns: 1fr;
@@ -280,5 +427,15 @@ th {
   .toolbar {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .toolbarActions {
+    flex-wrap: wrap;
+  }
+
+  .docsGrid,
+  .docsStats,
+  .endpoint {
+    grid-template-columns: 1fr;
   }
 }
