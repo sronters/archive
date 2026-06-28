@@ -51,6 +51,17 @@ button.primary {
   color: #ffffff;
 }
 
+.buttonLink.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #ffffff;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 button:hover {
   border-color: var(--accent-dark);
 }
@@ -149,6 +160,16 @@ input {
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 12px;
+}
+
+.feedback {
+  min-height: 38px;
+  margin-bottom: 12px;
+  border-left: 4px solid var(--accent);
+  background: #eaf7f5;
+  padding: 9px 12px;
+  color: #184a46;
+  font-size: 14px;
 }
 
 .metric,

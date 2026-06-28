@@ -60,10 +60,23 @@ outputs/               артефакты сдачи
 - pnpm 10+
 - Docker Desktop / Docker Compose v2
 
+Установка зависимостей:
+
+```powershell
+py -m pip install -e ".[dev,parsers]"
+corepack pnpm install --frozen-lockfile
+```
+
 Запуск полного стека:
 
 ```bash
 make up
+```
+
+Загрузка файла или архива через CLI:
+
+```powershell
+py -m medarchive_infrastructure.cli ingest ".\prices.zip" --api-url http://localhost:8000
 ```
 
 Проверки:

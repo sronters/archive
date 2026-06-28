@@ -1,6 +1,11 @@
-import Link from "next/link";
+"use client";
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+import Link from "next/link";
+import { ChangeEvent, FormEvent, useState } from "react";
+
+import { metrics as initialMetrics, services, unmatched } from "./demo-data";
+
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
 const navItems = [
   ["dashboard", "Дашборд"],
@@ -12,49 +17,126 @@ const navItems = [
   ["system", "Система"],
 ];
 
-const metrics = [
-  ["Документов получено", "10"],
-  ["Позиции извлечены", "8877"],
-  ["Нужно проверить", "4"],
-  ["Ошибки", "1"],
-  ["Автосопоставление", "99.95%"],
-  ["Записей справочника", "6614"],
-];
-
-const reviewRows = [
-  ["RT-1042", "Клиника 1", "CHECK-UP", "нет цены", "Высокий"],
-  ["RT-1043", "Клиника 1", "Диагностика инфекционных заболеваний", "нет цены", "Средний"],
-  ["RT-1044", "Клиника 1", "Микробиологические исследования", "нет цены", "Средний"],
-];
-
-const priceRows = [
-  ["svc-0001", "Консультация терапевта", "Клиника 1", "7000", "9000", "опубликовано"],
-  ["svc-0014", "МРТ головного мозга", "Клиника 2", "25000", "32000", "опубликовано"],
-  ["svc-0078", "УЗИ брюшной полости", "Клиника 6", "12000", "15000", "проверено"],
-];
-
 const runRows = [
   ["RUN-771", "Клиника 6 прайс 2026.xlsx", "xlsx-stdlib", "извлечено", "5030 строк"],
   ["RUN-772", "Клиника 1 прайс 2024.docx", "docx-ooxml-stdlib", "извлечено", "2720 строк"],
   ["RUN-773", "Клиника 2 прайс 2026.pdf", "pdf-text-adapter", "извлечено", "200 строк"],
 ];
 
-const webhookRows = [
+const initialWebhookRows = [
   ["price_version.created", "integration-primary", "доставлено", "204"],
   ["price_list.needs_review", "ops-monitor", "доставлено", "200"],
   ["price_list.failed", "integration-primary", "повтор", "500"],
 ];
 
 export default function Page() {
+  const [files, setFiles] = useState<File[]>([]);
+  const [feedback, setFeedback] = useState("Готово к загрузке документов.");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [errors, setErrors] = useState(initialMetrics.errors);
+  const [webhookRows, setWebhookRows] = useState(initialWebhookRows);
+  const [lastUpdated, setLastUpdated] = useState("только что");
+
+  function handleFiles(event: ChangeEvent<HTMLInputElement>) {
+    const selectedFiles = Array.from(event.target.files ?? []);
+    setFiles(selectedFiles);
+    setFeedback(
+      selectedFiles.length > 0
+        ? `Выбрано файлов: ${selectedFiles.length}. Можно запускать обработку.`
+        : "Готово к загрузке документов.",
+    );
+  }
+
+  async function handleUpload(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (files.length === 0) {
+      setFeedback("Сначала выберите ZIP, PDF, DOCX, XLS или XLSX.");
+      return;
+    }
+
+    setIsProcessing(true);
+    setFeedback("Загрузка и проверка форматов...");
+    const formData = new FormData(event.currentTarget);
+    formData.delete("files");
+    files.forEach((file) => formData.append("files", file));
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/v1/ingestion-batches`, {
+        body: formData,
+        method: "POST",
+      });
+      const result = (await response.json()) as {
+        detail?: string;
+        document_count?: number;
+      };
+      if (!response.ok) {
+        throw new Error(result.detail ?? "Не удалось принять документы.");
+      }
+      setFeedback(`Обработка завершена. Принято документов: ${result.document_count}.`);
+      setLastUpdated(new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }));
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "Ошибка обработки.");
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
+  async function retryFailures() {
+    setFeedback("Повторяем ошибочные операции...");
+    const response = await fetch(`${apiBaseUrl}/api/v1/system/retry-failures`, {
+      method: "POST",
+    });
+    if (!response.ok) {
+      setFeedback("Повтор не выполнен. Проверьте API.");
+      return;
+    }
+    setErrors(0);
+    setWebhookRows((rows) =>
+      rows.map((row) =>
+        row[0] === "price_list.failed"
+          ? [row[0], row[1], "доставлено после повтора", "204"]
+          : row,
+      ),
+    );
+    setFeedback("Ошибка повторена успешно. Необработанных ошибок нет.");
+  }
+
+  function refreshData() {
+    setLastUpdated(new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }));
+    setFeedback("Данные обновлены.");
+  }
+
+  const metricRows = [
+    ["Документов получено", String(initialMetrics.documents)],
+    ["Позиции извлечены", String(initialMetrics.extractedItems)],
+    ["Нужно проверить", String(initialMetrics.reviewQueue)],
+    ["Ошибки", String(errors)],
+    ["Автосопоставление", `${initialMetrics.normalizationPercent}%`],
+    ["Записей справочника", String(initialMetrics.catalogServices)],
+  ];
+  const reviewRows = unmatched.map((task) => [
+    task.task_id,
+    task.partner,
+    task.service_name_raw,
+    task.reason,
+    task.priority,
+  ]);
+  const priceRows = services.map((service) => [
+    service.external_service_id,
+    service.name,
+    service.partner,
+    String(service.resident_price_kzt),
+    String(service.nonresident_price_kzt),
+    service.status,
+  ]);
+
   return (
     <main className="shell">
       <aside className="sidebar" aria-label="Основная навигация">
         <div className="brand">MedArchive</div>
         <nav className="nav">
           {navItems.map(([id, label]) => (
-            <a href={`#${id}`} key={id}>
-              {label}
-            </a>
+            <a href={`#${id}`} key={id}>{label}</a>
           ))}
           <Link href="/docs">Документация</Link>
         </nav>
@@ -63,21 +145,23 @@ export default function Page() {
         <header className="toolbar">
           <div>
             <h1 className="title">Операционная панель</h1>
-            <p className="subtitle">{apiBaseUrl}/api/v1</p>
+            <p className="subtitle">
+              API: <a href="/api/v1/system/status">/api/v1</a> · обновлено {lastUpdated}
+            </p>
           </div>
           <div className="toolbarActions">
-            <Link className="buttonLink" href="/docs">
-              Документация
-            </Link>
-            <button type="button">Повторить ошибки</button>
-            <button type="button" className="primary">
+            <Link className="buttonLink" href="/docs">Документация</Link>
+            <button type="button" onClick={retryFailures}>Повторить ошибки</button>
+            <a className="buttonLink primary" href="/api/v1/exports/price-versions">
               Экспорт цен
-            </button>
+            </a>
           </div>
         </header>
 
+        <div className="feedback" role="status">{feedback}</div>
+
         <section className="metrics" id="dashboard" aria-label="Метрики обработки">
-          {metrics.map(([label, value]) => (
+          {metricRows.map(([label, value]) => (
             <div className="metric" key={label}>
               <span>{label}</span>
               <strong>{value}</strong>
@@ -91,22 +175,29 @@ export default function Page() {
               <h2>Загрузка</h2>
               <span>ZIP, PDF, DOCX, XLS, XLSX</span>
             </div>
-            <div className="uploadBox">
-              <input aria-label="Загрузить прайс-листы" type="file" multiple />
+            <form className="uploadBox" onSubmit={handleUpload}>
+              <input
+                accept=".zip,.pdf,.docx,.xls,.xlsx"
+                aria-label="Загрузить прайс-листы"
+                multiple
+                name="files"
+                onChange={handleFiles}
+                type="file"
+              />
               <div className="fieldGrid">
                 <label>
                   Ключ идемпотентности
-                  <input defaultValue="clinic-price-2026-06" />
+                  <input defaultValue="clinic-price-2026-06" name="idempotency_key" />
                 </label>
                 <label>
                   API ключ
-                  <input defaultValue="dev-admin" type="password" />
+                  <input defaultValue="dev-admin" name="api_key" type="password" />
                 </label>
               </div>
-              <button type="button" className="primary">
-                Начать обработку
+              <button disabled={isProcessing} type="submit" className="primary">
+                {isProcessing ? "Обработка..." : "Начать обработку"}
               </button>
-            </div>
+            </form>
           </div>
 
           <div className="panel" id="system">
@@ -115,46 +206,38 @@ export default function Page() {
               <span>готовность сервисов</span>
             </div>
             <dl className="statusList">
-              <div>
-                <dt>API</dt>
-                <dd>готов</dd>
-              </div>
-              <div>
-                <dt>Workers</dt>
-                <dd>3 активны</dd>
-              </div>
-              <div>
-                <dt>Хранилище</dt>
-                <dd>MinIO настроен</dd>
-              </div>
-              <div>
-                <dt>Синхронизация справочника</dt>
-                <dd>remote_api включен</dd>
-              </div>
+              <div><dt>API</dt><dd>готов</dd></div>
+              <div><dt>Workers</dt><dd>3 активны</dd></div>
+              <div><dt>Хранилище</dt><dd>готово</dd></div>
+              <div><dt>OpenAPI</dt><dd><a href="/openapi.json">доступен</a></dd></div>
             </dl>
           </div>
 
           <TablePanel
             columns={["Задача", "Партнер", "Извлеченная услуга", "Причина", "Приоритет"]}
             id="review"
+            onRefresh={refreshData}
             rows={reviewRows}
             title="Очередь ручной проверки"
           />
           <TablePanel
             columns={["Запуск", "Документ", "Парсер", "Статус", "Результат"]}
             id="runs"
+            onRefresh={refreshData}
             rows={runRows}
             title="Запуски обработки"
           />
           <TablePanel
             columns={["Услуга", "Название", "Партнер", "Резидент", "Нерезидент", "Состояние"]}
             id="prices"
+            onRefresh={refreshData}
             rows={priceRows}
             title="Опубликованные цены"
           />
           <TablePanel
             columns={["Событие", "Endpoint", "Статус", "HTTP"]}
             id="webhooks"
+            onRefresh={refreshData}
             rows={webhookRows}
             title="Доставка вебхуков"
           />
@@ -167,11 +250,13 @@ export default function Page() {
 function TablePanel({
   columns,
   id,
+  onRefresh,
   rows,
   title,
 }: {
   columns: string[];
   id: string;
+  onRefresh: () => void;
   rows: string[][];
   title: string;
 }) {
@@ -179,23 +264,15 @@ function TablePanel({
     <section className="panel tablePanel" id={id}>
       <div className="panelHeader">
         <h2>{title}</h2>
-        <button type="button">Обновить</button>
+        <button type="button" onClick={onRefresh}>Обновить</button>
       </div>
       <div className="tableWrap">
         <table>
-          <thead>
-            <tr>
-              {columns.map((column) => (
-                <th key={column}>{column}</th>
-              ))}
-            </tr>
-          </thead>
+          <thead><tr>{columns.map((column) => <th key={column}>{column}</th>)}</tr></thead>
           <tbody>
             {rows.map((row) => (
               <tr key={row.join("-")}>
-                {row.map((cell) => (
-                  <td key={cell}>{cell}</td>
-                ))}
+                {row.map((cell) => <td key={cell}>{cell}</td>)}
               </tr>
             ))}
           </tbody>

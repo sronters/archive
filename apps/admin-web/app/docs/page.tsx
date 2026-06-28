@@ -81,6 +81,11 @@ py -m pytest tests/test_xlsx_vertical_slice.py tests/test_docx_parser.py tests/t
 
       <section className="docsBlock">
         <h2>API</h2>
+        <p>
+          <a href="/openapi.json">Открыть спецификацию OpenAPI</a>
+          {" · "}
+          <a href="/api/v1/system/status">Проверить статус API</a>
+        </p>
         <div className="endpointList">
           {apiEndpoints.map(([method, path, text]) => (
             <div className="endpoint" key={path}>

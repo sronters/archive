@@ -2,7 +2,7 @@
 
 ## Что сдаем
 
-- GitHub: `https://github.com/sronters/archive` ветка `initial-backend-fixes`
+- GitHub: `https://github.com/sronters/archive` ветка `main`
 - Рабочий прототип: https://med-chi-pearl.vercel.app
 - Документация API: Swagger/FastAPI `/docs` и Mintlify-проект в `docs-site/`
 - Обработанная база: `outputs/processed_database_preview.json`
@@ -18,7 +18,7 @@
 Команда <номер команды>
 
 Кейс 2: MedArchive / MedPartners
-GitHub: https://github.com/sronters/archive/tree/initial-backend-fixes
+GitHub: https://github.com/sronters/archive/tree/main
 Прототип: https://med-chi-pearl.vercel.app
 Документация: папка docs-site/ или Mintlify URL
 Обработанная база: outputs/processed_database_preview.json
