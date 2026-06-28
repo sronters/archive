@@ -3,11 +3,10 @@ from __future__ import annotations
 import json
 from functools import lru_cache
 from pathlib import Path
-from uuid import UUID, uuid5, NAMESPACE_URL
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
-
 
 router = APIRouter(tags=["hackathon-search"])
 
@@ -77,13 +76,17 @@ def list_services(
         needle = _normalize(q)
         rows = [row for row in rows if needle in _normalize(str(row.get("service_name", "")))]
     if category:
-        rows = [row for row in rows if _normalize(str(row.get("category", ""))) == _normalize(category)]
+        rows = [
+            row
+            for row in rows
+            if _normalize(str(row.get("category", ""))) == _normalize(category)
+        ]
     return [
         ServiceDemoResponse(
             service_id=UUID(str(row["service_id"])),
-            external_service_id=row.get("external_service_id"),
+            external_service_id=_optional_string(row.get("external_service_id")),
             service_name=str(row["service_name"]),
-            category=row.get("category"),
+            category=_optional_string(row.get("category")),
             is_active=bool(row.get("is_active", True)),
         )
         for row in rows[offset : offset + limit]
@@ -122,7 +125,11 @@ def list_partner_services(
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> list[PartnerOfferDemoResponse]:
-    rows = [item for item in _items() if _partner_id(str(item.get("partner_name", ""))) == partner_id]
+    rows = [
+        item
+        for item in _items()
+        if _partner_id(str(item.get("partner_name", ""))) == partner_id
+    ]
     return [_offer_response(item) for item in rows[offset : offset + limit]]
 
 
@@ -168,7 +175,7 @@ def list_unmatched(
             item_id=UUID(str(item["item_id"])),
             partner_name=str(item.get("partner_name", "")),
             service_name_raw=str(item.get("service_name_raw", "")),
-            review_reasons=list(item.get("review_reasons") or []),
+            review_reasons=_string_list(item.get("review_reasons")),
             source_file=str(item.get("source_file", "")),
         )
         for item in rows[offset : offset + limit]
@@ -194,7 +201,13 @@ def _offer_response(item: dict[str, object]) -> PartnerOfferDemoResponse:
 
 
 def _partner_names() -> list[str]:
-    return sorted({str(item.get("partner_name", "")) for item in _items() if item.get("partner_name")})
+    return sorted(
+        {
+            str(item.get("partner_name", ""))
+            for item in _items()
+            if item.get("partner_name")
+        }
+    )
 
 
 @lru_cache(maxsize=1)
@@ -202,7 +215,10 @@ def _catalog() -> list[dict[str, object]]:
     path = _repo_root() / "outputs" / "service_catalog_seed.json"
     if not path.exists():
         return []
-    return json.loads(path.read_text(encoding="utf-8"))
+    payload: object = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, list):
+        return []
+    return [item for item in payload if isinstance(item, dict)]
 
 
 @lru_cache(maxsize=1)
@@ -210,8 +226,23 @@ def _items() -> list[dict[str, object]]:
     path = _repo_root() / "outputs" / "processed_database_preview.json"
     if not path.exists():
         return []
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    return list(payload.get("price_items") or [])
+    payload: object = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        return []
+    price_items = payload.get("price_items")
+    if not isinstance(price_items, list):
+        return []
+    return [item for item in price_items if isinstance(item, dict)]
+
+
+def _optional_string(value: object) -> str | None:
+    return str(value) if value is not None else None
+
+
+def _string_list(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value]
 
 
 def _repo_root() -> Path:

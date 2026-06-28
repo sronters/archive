@@ -3,17 +3,19 @@ from __future__ import annotations
 import csv
 import json
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from uuid import uuid5, NAMESPACE_URL
+from uuid import NAMESPACE_URL, uuid5
 
 from medarchive_document_parsers.docx import DocxParser
 from medarchive_document_parsers.xlsx import XlsxParser
 
-
 ARCHIVE_DIR = Path(r"C:\Users\user\Downloads\Telegram Desktop\Хакатон\Хакатон")
 OUTPUT_DIR = Path("outputs")
-PRICE_RE = re.compile(r"(?P<name>[A-Za-zА-Яа-яЁёІіҚқҒғҰұҮүӘәӨөҺһ0-9 .,/()\-]{4,}?)\s+(?P<price>\d[\d\s]{2,})(?:\s+(?P<nonresident>\d[\d\s]{2,}))?$")
+PRICE_RE = re.compile(
+    r"(?P<name>[A-Za-zА-Яа-яЁёІіҚқҒғҰұҮүӘәӨөҺһ0-9 .,/()\-]{4,}?)"
+    r"\s+(?P<price>\d[\d\s]{2,})(?:\s+(?P<nonresident>\d[\d\s]{2,}))?$"
+)
 
 
 def normalize(value: str) -> str:
@@ -122,7 +124,9 @@ def main() -> None:
                 "file_name": file_path.name,
                 "file_format": suffix.lstrip(".").upper(),
                 "partner_name": partner,
-                "parse_status": status if extracted_rows or status != "processed" else "needs_review",
+                "parse_status": (
+                    status if extracted_rows or status != "processed" else "needs_review"
+                ),
                 "extracted_rows": len(extracted_rows),
                 "warnings": warnings,
             }
@@ -151,7 +155,12 @@ def main() -> None:
                 review_reasons.append("nonresident_price_below_resident_price")
             items.append(
                 {
-                    "item_id": str(uuid5(NAMESPACE_URL, f"medarchive:item:{file_path.name}:{row_index}:{key}")),
+                    "item_id": str(
+                        uuid5(
+                            NAMESPACE_URL,
+                            f"medarchive:item:{file_path.name}:{row_index}:{key}",
+                        )
+                    ),
                     "doc_id": doc_id,
                     "partner_name": partner,
                     "source_file": file_path.name,
@@ -169,7 +178,7 @@ def main() -> None:
     verified = sum(1 for item in items if item["is_verified"])
     queued = len(items) - verified
     report = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "archive_path": str(ARCHIVE_DIR),
         "document_count": len(documents),
         "format_counts": {
@@ -193,7 +202,11 @@ def main() -> None:
         json.dumps({"documents": documents, "price_items": items}, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
-    with (OUTPUT_DIR / "processed_price_items_preview.csv").open("w", encoding="utf-8-sig", newline="") as handle:
+    with (OUTPUT_DIR / "processed_price_items_preview.csv").open(
+        "w",
+        encoding="utf-8-sig",
+        newline="",
+    ) as handle:
         writer = csv.DictWriter(handle, fieldnames=list(items[0].keys()) if items else ["item_id"])
         writer.writeheader()
         writer.writerows(items)
@@ -220,9 +233,15 @@ def main() -> None:
                 "",
                 "## Примечания",
                 "",
-                "- Это preview обработанной базы, сформированный из предоставленного архива хакатона.",
+                (
+                    "- Это preview обработанной базы, сформированный "
+                    "из предоставленного архива хакатона."
+                ),
                 "- Для XLS в текущем локальном окружении нужен optional parser extra `xlrd`.",
-                "- Полный production-прогон нужно запускать через Docker Compose с подключенными parser/OCR extras.",
+                (
+                    "- Полный production-прогон нужно запускать через Docker Compose "
+                    "с подключенными parser/OCR extras."
+                ),
             ]
         ),
         encoding="utf-8",

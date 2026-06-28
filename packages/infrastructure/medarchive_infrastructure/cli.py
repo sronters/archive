@@ -51,16 +51,16 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.command == "ingest":
         paths = _upload_paths(args.path)
-        result = _upload_files(
+        upload_result = _upload_files(
             paths=paths,
             api_url=args.api_url,
             api_key=args.api_key,
             idempotency_key=args.idempotency_key,
         )
-        print(json.dumps(result, ensure_ascii=False, indent=2))
+        print(json.dumps(upload_result, ensure_ascii=False, indent=2))
     elif args.command == "graph" and args.graph_command == "rebuild":
-        result = asyncio.run(_rebuild_graph())
-        print(f"projected_price_versions={result.projected_price_versions}")
+        graph_result = asyncio.run(_rebuild_graph())
+        print(f"projected_price_versions={graph_result.projected_price_versions}")
 
 
 def _upload_paths(path: Path) -> list[Path]:
