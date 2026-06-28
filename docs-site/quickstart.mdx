@@ -1,0 +1,41 @@
+---
+title: Быстрый запуск
+description: Как запустить и проверить прототип
+---
+
+## Требования
+
+- Python 3.12
+- Node.js 24+
+- pnpm 10+
+- Docker Desktop с Docker Compose v2
+- optional parser extras: PyMuPDF, python-docx, openpyxl, xlrd, OCR engine
+
+## Локальный запуск
+
+```bash
+make up
+```
+
+Полезные адреса:
+
+- административная панель: `http://localhost:3000`
+- health API: `http://localhost:8000/health`
+- Swagger/OpenAPI: `http://localhost:8000/docs`
+- метрики: `http://localhost:8000/api/v1/metrics`
+- Grafana: `http://localhost:3001`
+
+## Быстрая проверка
+
+```bash
+make backend-check
+make frontend-check
+```
+
+Короткая smoke-проверка без полного Docker-стека:
+
+```bash
+py -m pytest tests/test_xlsx_vertical_slice.py tests/test_docx_parser.py tests/test_ingestion_api.py tests/test_api_health.py -q
+```
+
+Для теста текстового PDF нужен parser extra с `fitz` / PyMuPDF.

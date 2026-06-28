@@ -1,0 +1,32 @@
+---
+title: API
+description: API для загрузки, поиска, ревью, цен и интеграций
+---
+
+API версионируется под `/api/v1`. Swagger UI доступен по адресу `/docs`.
+
+Ключевые группы endpoint-ов:
+
+- `POST /api/v1/ingestion-batches`
+- `POST /api/v1/service-catalog/imports`
+- `POST /api/v1/partners/imports`
+- `GET /api/v1/services`
+- `GET /api/v1/services/{service_id}/partners`
+- `GET /api/v1/partners`
+- `GET /api/v1/partners/{partner_id}/services`
+- `GET /api/v1/search`
+- `GET /api/v1/unmatched`
+- `POST /api/v1/match`
+- `GET /api/v1/review-tasks`
+- `POST /api/v1/review-tasks/{task_id}/claim`
+- `POST /api/v1/review-tasks/{task_id}/approve`
+- `POST /api/v1/review-tasks/{task_id}/reject`
+- `POST /api/v1/review-tasks/{task_id}/correct`
+- `GET /api/v1/price-versions`
+- `GET /api/v1/services/{external_service_id}/offers`
+- `GET /api/v1/partners/{external_partner_id}/prices`
+- `GET /api/v1/price-changes`
+- `GET /api/v1/exports/price-versions`
+- `GET /api/v1/system/status`
+
+Mintlify подключает сгенерированный файл `openapi.json`, поэтому документация API синхронизирована с FastAPI.

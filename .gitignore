@@ -8,8 +8,10 @@ __pycache__/
 .local_storage/
 node_modules/
 .next/
+.vercel/
 tsconfig.tsbuildinfo
 dist/
 coverage/
 .DS_Store
 *.log
+.vercel

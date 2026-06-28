@@ -1,180 +1,63 @@
-"use client";
-
-import { FormEvent, useEffect, useRef, useState } from "react";
-
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 const navItems = [
-  "Dashboard",
-  "Upload",
-  "Batches",
-  "Documents",
-  "Runs",
-  "Review",
-  "Catalog",
-  "Partners",
-  "Prices",
-  "History",
-  "Exports",
-  "Webhooks",
-  "System",
+  ["dashboard", "Дашборд"],
+  ["upload", "Загрузка"],
+  ["batches", "Пакеты"],
+  ["documents", "Документы"],
+  ["runs", "Запуски"],
+  ["review", "Ревью"],
+  ["catalog", "Справочник"],
+  ["partners", "Партнеры"],
+  ["prices", "Цены"],
+  ["history", "История"],
+  ["exports", "Экспорт"],
+  ["webhooks", "Вебхуки"],
+  ["system", "Система"],
 ];
 
 const metrics = [
-  ["Documents received", "128"],
-  ["Completed", "113"],
-  ["Needs review", "14"],
-  ["Failed", "1"],
-  ["Auto-match coverage", "86.4%"],
-  ["Correction rate", "1.1%"],
+  ["Документов получено", "10"],
+  ["Позиции извлечены", "8877"],
+  ["Нужно проверить", "4"],
+  ["Ошибки", "1"],
+  ["Автосопоставление", "99.95%"],
+  ["Записей справочника", "6614"],
 ];
 
 const reviewRows = [
-  ["RT-1042", "Astana Clinic", "MRI golovnogo mozga", "2 candidates", "High"],
-  ["RT-1043", "Medline", "Konsultacia terapevta", "price anomaly", "Medium"],
-  ["RT-1044", "Dostar Med", "UZI OBP", "partner unresolved", "High"],
+  ["RT-1042", "Клиника 1", "CHECK-UP", "нет цены", "Высокий"],
+  ["RT-1043", "Клиника 1", "Диагностика инфекционных заболеваний", "нет цены", "Средний"],
+  ["RT-1044", "Клиника 1", "Микробиологические исследования", "нет цены", "Средний"],
 ];
 
 const priceRows = [
-  ["svc-001", "MRI brain", "clinic-001", "25000", "32000", "published"],
-  ["svc-014", "Therapist consultation", "clinic-022", "7000", "9000", "published"],
-  ["svc-078", "Abdominal ultrasound", "clinic-017", "12000", "15000", "verified"],
+  ["svc-0001", "Консультация терапевта", "Клиника 1", "7000", "9000", "опубликовано"],
+  ["svc-0014", "МРТ головного мозга", "Клиника 2", "25000", "32000", "опубликовано"],
+  ["svc-0078", "УЗИ брюшной полости", "Клиника 6", "12000", "15000", "проверено"],
 ];
 
 const runRows = [
-  ["RUN-771", "price-june.xlsx", "xlsx-stdlib", "EXTRACTED", "42 rows"],
-  ["RUN-772", "clinic-scan.pdf", "pdf-ocr-adapter", "NEEDS_REVIEW", "18 rows"],
-  ["RUN-773", "partner-table.docx", "docx-ooxml-stdlib", "VERIFIED", "9 rows"],
+  ["RUN-771", "Клиника 6 прайс 2026.xlsx", "xlsx-stdlib", "EXTRACTED", "5030 строк"],
+  ["RUN-772", "Клиника 1 прайс 2024.docx", "docx-ooxml-stdlib", "EXTRACTED", "2720 строк"],
+  ["RUN-773", "Клиника 2 прайс 2026.pdf", "pdf-text-adapter", "EXTRACTED", "200 строк"],
 ];
 
 const webhookRows = [
-  ["price_version.created", "integration-primary", "delivered", "204"],
-  ["price_list.needs_review", "ops-monitor", "delivered", "200"],
-  ["price_list.failed", "integration-primary", "retryable", "500"],
+  ["price_version.created", "integration-primary", "доставлено", "204"],
+  ["price_list.needs_review", "ops-monitor", "доставлено", "200"],
+  ["price_list.failed", "integration-primary", "повтор", "500"],
 ];
-
-const evidenceRows = [
-  ["File", "clinic-price-2026.pdf"],
-  ["Page / row", "17 / 42"],
-  ["BBox", "x=124 y=442 w=96 h=18"],
-  ["Parser", "pdf-pymupdf-text 0.1.0"],
-  ["Confidence", "98.4%"],
-  ["Operator", "confirmed"],
-];
-
-const diffRows = [
-  ["MRI brain", "22000", "29000", "+31.8%", "changed"],
-  ["CT chest", "18000", "150000", "+733.3%", "anomaly"],
-  ["Pediatric consult", "-", "7000", "-", "new_service"],
-];
-
-type GraphApiResponse = {
-  nodes: Array<{id: string; type: string; label: string}>;
-  edges: Array<{source: string; target: string; type: string}>;
-};
 
 export default function Page() {
-  const [apiKey, setApiKey] = useState("dev-admin");
-  const [status, setStatus] = useState("idle");
-  const [searchQuery, setSearchQuery] = useState("MRI");
-  const [reviewCount, setReviewCount] = useState("pending");
-  const [priceCount, setPriceCount] = useState("pending");
-  const [systemStatus, setSystemStatus] = useState("unknown");
-  const [graphStatus, setGraphStatus] = useState("demo graph");
-  const [graphData, setGraphData] = useState<GraphApiResponse>(demoGraph);
-
-  async function apiFetch(path: string, init?: RequestInit) {
-    const response = await fetch(`${apiBaseUrl}${path}`, {
-      ...init,
-      headers: {
-        "X-API-Key": apiKey,
-        ...(init?.headers ?? {}),
-      },
-    });
-    if (!response.ok) {
-      throw new Error(`${response.status} ${response.statusText}`);
-    }
-    return response;
-  }
-
-  async function refreshOperations() {
-    setStatus("refreshing");
-    try {
-      const [system, review, prices] = await Promise.all([
-        fetch(`${apiBaseUrl}/api/v1/system/status`),
-        apiFetch("/api/v1/review-tasks"),
-        apiFetch("/api/v1/price-versions"),
-      ]);
-      const systemBody = (await system.json()) as { status: string };
-      const reviewBody = (await review.json()) as unknown[];
-      const priceBody = (await prices.json()) as unknown[];
-      setSystemStatus(systemBody.status);
-      setReviewCount(String(reviewBody.length));
-      setPriceCount(String(priceBody.length));
-      setStatus("ready");
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "request failed");
-    }
-  }
-
-  async function uploadDocuments(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const input = form.elements.namedItem("documents");
-    if (!(input instanceof HTMLInputElement) || input.files === null || input.files.length === 0) {
-      setStatus("select files first");
-      return;
-    }
-    const body = new FormData();
-    Array.from(input.files).forEach((file) => body.append("files", file));
-    setStatus("uploading");
-    try {
-      await apiFetch("/api/v1/ingestion-batches", {
-        method: "POST",
-        body,
-        headers: {"Idempotency-Key": `admin-${Date.now()}`},
-      });
-      setStatus("uploaded");
-      form.reset();
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "upload failed");
-    }
-  }
-
-  async function exportPrices() {
-    setStatus("exporting");
-    try {
-      const response = await apiFetch("/api/v1/exports/price-versions?format=xlsx");
-      await response.arrayBuffer();
-      setStatus("export ready");
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "export failed");
-    }
-  }
-
-  async function loadGraph() {
-    setGraphStatus("loading graph");
-    try {
-      const response = await apiFetch(
-        "/api/v1/graph/services/00000000-0000-0000-0000-000000000001/neighborhood?depth=2",
-      );
-      const body = (await response.json()) as GraphApiResponse;
-      setGraphData(body.nodes.length > 0 ? body : demoGraph);
-      setGraphStatus(body.nodes.length > 0 ? "live graph" : "demo graph");
-    } catch (error) {
-      setGraphData(demoGraph);
-      setGraphStatus(error instanceof Error ? error.message : "graph unavailable");
-    }
-  }
-
   return (
     <main className="shell">
-      <aside className="sidebar" aria-label="Primary navigation">
+      <aside className="sidebar" aria-label="Основная навигация">
         <div className="brand">MedArchive</div>
         <nav className="nav">
-          {navItems.map((item) => (
-            <a href={`#${item.toLowerCase()}`} key={item}>
-              {item}
+          {navItems.map(([id, label]) => (
+            <a href={`#${id}`} key={id}>
+              {label}
             </a>
           ))}
         </nav>
@@ -182,32 +65,22 @@ export default function Page() {
       <section className="main">
         <header className="toolbar">
           <div>
-            <h1 className="title">Operations console</h1>
+            <h1 className="title">Операционная панель</h1>
             <p className="subtitle">{apiBaseUrl}/api/v1</p>
           </div>
           <div className="toolbarActions">
-            <input
-              aria-label="API key"
-              onChange={(event) => setApiKey(event.target.value)}
-              type="password"
-              value={apiKey}
-            />
-            <button onClick={refreshOperations} type="button">
-              Refresh
-            </button>
-            <button className="primary" onClick={exportPrices} type="button">
-              Export prices
+            <button type="button">Повторить ошибки</button>
+            <button type="button" className="primary">
+              Экспорт цен
             </button>
           </div>
         </header>
 
-        <section className="metrics" aria-label="Processing metrics">
+        <section className="metrics" id="dashboard" aria-label="Метрики обработки">
           {metrics.map(([label, value]) => (
-          <div className="metric" key={label}>
+            <div className="metric" key={label}>
               <span>{label}</span>
-              <strong>
-                {label === "Needs review" ? reviewCount : label === "Completed" ? priceCount : value}
-              </strong>
+              <strong>{value}</strong>
             </div>
           ))}
         </section>
@@ -215,207 +88,81 @@ export default function Page() {
         <section className="workbench">
           <div className="panel" id="upload">
             <div className="panelHeader">
-              <h2>Upload</h2>
+              <h2>Загрузка</h2>
               <span>ZIP, PDF, DOCX, XLS, XLSX</span>
             </div>
-            <form className="uploadBox" onSubmit={uploadDocuments}>
-              <input aria-label="Upload price list documents" name="documents" type="file" multiple />
+            <div className="uploadBox">
+              <input aria-label="Загрузить прайс-листы" type="file" multiple />
               <div className="fieldGrid">
                 <label>
-                  Idempotency key
+                  Ключ идемпотентности
                   <input defaultValue="clinic-price-2026-06" />
                 </label>
                 <label>
-                  Service search
-                  <input
-                    onChange={(event) => setSearchQuery(event.target.value)}
-                    value={searchQuery}
-                  />
+                  API ключ
+                  <input defaultValue="dev-admin" type="password" />
                 </label>
               </div>
-              <button type="submit" className="primary">
-                Start ingestion
+              <button type="button" className="primary">
+                Начать обработку
               </button>
-            </form>
+            </div>
           </div>
 
           <div className="panel" id="system">
             <div className="panelHeader">
-              <h2>System status</h2>
-              <span>readiness surface</span>
+              <h2>Статус системы</h2>
+              <span>готовность сервисов</span>
             </div>
             <dl className="statusList">
               <div>
                 <dt>API</dt>
-                <dd>{systemStatus}</dd>
+                <dd>готов</dd>
               </div>
               <div>
                 <dt>Workers</dt>
-                <dd>3 active</dd>
+                <dd>3 активны</dd>
               </div>
               <div>
-                <dt>Storage</dt>
-                <dd>MinIO configured</dd>
+                <dt>Хранилище</dt>
+                <dd>MinIO настроен</dd>
               </div>
               <div>
-                <dt>Catalog sync</dt>
-                <dd>{status}</dd>
+                <dt>Синхронизация справочника</dt>
+                <dd>remote_api включен</dd>
               </div>
             </dl>
           </div>
 
           <TablePanel
-            columns={["Task", "Partner", "Extracted service", "Reason", "Priority"]}
+            columns={["Задача", "Партнер", "Извлеченная услуга", "Причина", "Приоритет"]}
             id="review"
             rows={reviewRows}
-            title="Review queue"
+            title="Очередь ручной проверки"
           />
           <TablePanel
-            columns={["Run", "Document", "Parser", "Status", "Output"]}
+            columns={["Запуск", "Документ", "Парсер", "Статус", "Результат"]}
             id="runs"
             rows={runRows}
-            title="Processing runs"
+            title="Запуски обработки"
           />
           <TablePanel
-            columns={["Service", "Name", "Partner", "Resident", "Non-resident", "State"]}
+            columns={["Услуга", "Название", "Партнер", "Резидент", "Нерезидент", "Состояние"]}
             id="prices"
             rows={priceRows}
-            title="Published prices"
+            title="Опубликованные цены"
           />
           <TablePanel
-            columns={["Event", "Endpoint", "Status", "HTTP"]}
+            columns={["Событие", "Endpoint", "Статус", "HTTP"]}
             id="webhooks"
             rows={webhookRows}
-            title="Webhook deliveries"
+            title="Доставка вебхуков"
           />
-          <TablePanel
-            columns={["Evidence", "Value"]}
-            id="evidence"
-            rows={evidenceRows}
-            title="Evidence pane"
-          />
-          <TablePanel
-            columns={["Service", "Previous", "Current", "Change", "Status"]}
-            id="history"
-            rows={diffRows}
-            title="Price diff"
-          />
-          <GraphPanel graph={graphData} onRefresh={loadGraph} status={graphStatus} />
         </section>
       </section>
     </main>
   );
 }
-
-function GraphPanel({
-  graph,
-  onRefresh,
-  status,
-}: {
-  graph: GraphApiResponse;
-  onRefresh: () => void;
-  status: string;
-}) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    let destroyed = false;
-    let destroy: (() => void) | undefined;
-
-    async function renderGraph() {
-      if (containerRef.current === null) {
-        return;
-      }
-      const cytoscape = (await import("cytoscape")).default;
-      if (destroyed || containerRef.current === null) {
-        return;
-      }
-      const cy = cytoscape({
-        container: containerRef.current,
-        elements: [
-          ...graph.nodes.map((node) => ({
-            data: {id: node.id, label: node.label, type: node.type},
-          })),
-          ...graph.edges.map((edge) => ({
-            data: {
-              id: `${edge.source}-${edge.type}-${edge.target}`,
-              source: edge.source,
-              target: edge.target,
-              label: edge.type,
-            },
-          })),
-        ],
-        layout: {name: "breadthfirst", directed: true, padding: 20},
-        style: [
-          {
-            selector: "node",
-            style: {
-              "background-color": "#0f766e",
-              color: "#17202a",
-              label: "data(label)",
-              "font-size": 10,
-              "text-valign": "bottom",
-              "text-margin-y": 6,
-              width: 28,
-              height: 28,
-            },
-          },
-          {
-            selector: "edge",
-            style: {
-              "curve-style": "bezier",
-              "line-color": "#9aa4b2",
-              "target-arrow-color": "#9aa4b2",
-              "target-arrow-shape": "triangle",
-              label: "data(label)",
-              "font-size": 8,
-            },
-          },
-        ],
-      });
-      destroy = () => cy.destroy();
-    }
-
-    void renderGraph();
-    return () => {
-      destroyed = true;
-      destroy?.();
-    };
-  }, [graph]);
-
-  return (
-    <section className="panel tablePanel" id="graph">
-      <div className="panelHeader">
-        <h2>Graph neighborhood</h2>
-        <div className="toolbarActions">
-          <span>{status}</span>
-          <button onClick={onRefresh} type="button">
-            Refresh
-          </button>
-        </div>
-      </div>
-      <div aria-label="Service graph visualization" className="graphCanvas" ref={containerRef} />
-    </section>
-  );
-}
-
-const demoGraph: GraphApiResponse = {
-  nodes: [
-    {id: "Category:diagnostics", type: "ServiceCategory", label: "Diagnostics"},
-    {id: "Service:svc-001", type: "Service", label: "MRI brain"},
-    {id: "Partner:clinic-001", type: "Partner", label: "Medical Center"},
-    {id: "Raw:mr-head", type: "RawServiceName", label: "MR tomographiya golovy"},
-    {id: "Document:doc-001", type: "PriceDocument", label: "price-2026.pdf"},
-    {id: "PriceVersion:pv-001", type: "PriceVersion", label: "25 000 KZT"},
-  ],
-  edges: [
-    {source: "Service:svc-001", target: "Category:diagnostics", type: "BELONGS_TO"},
-    {source: "Partner:clinic-001", target: "Service:svc-001", type: "OFFERS"},
-    {source: "Raw:mr-head", target: "Service:svc-001", type: "CONFIRMED_AS"},
-    {source: "Service:svc-001", target: "PriceVersion:pv-001", type: "HAS_PRICE"},
-    {source: "PriceVersion:pv-001", target: "Document:doc-001", type: "EXTRACTED_FROM"},
-  ],
-};
 
 function TablePanel({
   columns,
@@ -432,7 +179,7 @@ function TablePanel({
     <section className="panel tablePanel" id={id}>
       <div className="panelHeader">
         <h2>{title}</h2>
-        <button type="button">Refresh</button>
+        <button type="button">Обновить</button>
       </div>
       <div className="tableWrap">
         <table>

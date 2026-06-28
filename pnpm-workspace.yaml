@@ -1,2 +1,5 @@
 packages:
   - "apps/admin-web"
+allowBuilds:
+  sharp: true
+  unrs-resolver: true

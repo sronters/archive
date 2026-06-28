@@ -1,0 +1,47 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "MedArchive",
+  "description": "Автоматическая обработка прайс-листов клиник, нормализация услуг, ручная верификация и публикация цен.",
+  "colors": {
+    "primary": "#0f766e",
+    "light": "#14b8a6",
+    "dark": "#0f172a"
+  },
+  "favicon": "/favicon.svg",
+  "api": {
+    "openapi": ["openapi.json"],
+    "playground": {
+      "display": "interactive"
+    },
+    "examples": {
+      "languages": ["curl", "python", "javascript"]
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Guide",
+        "groups": [
+          {
+            "group": "Submission",
+            "pages": [
+              "index",
+              "quickstart",
+              "processed-database",
+              "demo-script",
+              "quality-report"
+            ]
+          },
+          {
+            "group": "System",
+            "pages": [
+              "architecture",
+              "api"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

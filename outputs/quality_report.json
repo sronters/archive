@@ -1,0 +1,111 @@
+{
+  "generated_at": "2026-06-28T11:44:29.547644+00:00",
+  "archive_path": "C:\\Users\\user\\Downloads\\Telegram Desktop\\Хакатон\\Хакатон",
+  "document_count": 10,
+  "format_counts": {
+    "pdf": 6,
+    "docx": 1,
+    "xlsx": 2,
+    "xls": 1
+  },
+  "extracted_item_count": 8877,
+  "catalog_service_count": 6614,
+  "successful_normalization_percent": 99.95,
+  "review_queue_count": 4,
+  "documents": [
+    {
+      "doc_id": "657ee195-064d-5978-b709-59e4ab825998",
+      "file_name": "Клиника 1 2026.pdf",
+      "file_format": "PDF",
+      "partner_name": "Клиника 1 2026",
+      "parse_status": "processed",
+      "extracted_rows": 200,
+      "warnings": []
+    },
+    {
+      "doc_id": "a7c1f28e-0da5-5ab8-b253-c7a076b8981d",
+      "file_name": "Клиника 1 прайс 2024.docx",
+      "file_format": "DOCX",
+      "partner_name": "Клиника 1",
+      "parse_status": "processed",
+      "extracted_rows": 2720,
+      "warnings": []
+    },
+    {
+      "doc_id": "86ea826d-93ac-5307-a6f9-afb1c8676253",
+      "file_name": "Клиника 2 прайс 2025 год.PDF",
+      "file_format": "PDF",
+      "partner_name": "Клиника 2",
+      "parse_status": "processed",
+      "extracted_rows": 200,
+      "warnings": []
+    },
+    {
+      "doc_id": "7c2a09ed-f6fc-52d6-bdb1-8bc0c6c100a5",
+      "file_name": "Клиника 2 прайс 2026.pdf",
+      "file_format": "PDF",
+      "partner_name": "Клиника 2",
+      "parse_status": "processed",
+      "extracted_rows": 200,
+      "warnings": []
+    },
+    {
+      "doc_id": "6a7e4f87-4599-539a-bb7b-26795a1b3dff",
+      "file_name": "Клиника 3 прайс 2026.PDF",
+      "file_format": "PDF",
+      "partner_name": "Клиника 3",
+      "parse_status": "processed",
+      "extracted_rows": 200,
+      "warnings": []
+    },
+    {
+      "doc_id": "7c1ddd1a-c591-55f8-bc87-a282bbaf1e93",
+      "file_name": "Клиника 4 прайс 2026.pdf",
+      "file_format": "PDF",
+      "partner_name": "Клиника 4",
+      "parse_status": "processed",
+      "extracted_rows": 200,
+      "warnings": []
+    },
+    {
+      "doc_id": "0a96e0f5-151c-52f6-b77d-a5ae6ac399e4",
+      "file_name": "Клиника 5 прайс 2025.pdf",
+      "file_format": "PDF",
+      "partner_name": "Клиника 5",
+      "parse_status": "processed",
+      "extracted_rows": 1,
+      "warnings": []
+    },
+    {
+      "doc_id": "16fa47f9-cf28-566f-91f8-819e48dfb691",
+      "file_name": "Клиника 6 прайс 2026.xlsx",
+      "file_format": "XLSX",
+      "partner_name": "Клиника 6",
+      "parse_status": "processed",
+      "extracted_rows": 5030,
+      "warnings": []
+    },
+    {
+      "doc_id": "f529cede-7530-5216-90d5-9a2625220912",
+      "file_name": "Клиника 7_Прайс 2026.xls",
+      "file_format": "XLS",
+      "partner_name": "Клиника 7_Прайс 2026",
+      "parse_status": "needs_parser_extra",
+      "extracted_rows": 0,
+      "warnings": [
+        "Legacy XLS requires xlrd parser extra in this local environment."
+      ]
+    },
+    {
+      "doc_id": "c2a82219-e664-5e95-94c1-b1a86fbded5a",
+      "file_name": "Клиника 8 2026.xlsx",
+      "file_format": "XLSX",
+      "partner_name": "Клиника 8 2026",
+      "parse_status": "processed",
+      "extracted_rows": 126,
+      "warnings": [
+        "Страховой: header row not detected"
+      ]
+    }
+  ]
+}

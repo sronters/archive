@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
   title: "MedArchive Admin",
-  description: "Operational admin interface for MedArchive processing workflows.",
+  description: "Операционная панель MedArchive для обработки прайс-листов клиник.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

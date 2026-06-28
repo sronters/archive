@@ -1,0 +1,62 @@
+---
+title: Отчет качества
+description: Метрики обработки и покрытие требований
+---
+
+## Состав архива
+
+В предоставленном архиве 10 прайс-листов:
+
+- 6 PDF-файлов
+- 1 DOCX-файл
+- 2 XLSX-файла
+- 1 XLS-файл
+
+Это закрывает основные форматы из технического задания.
+
+## Результат обработки
+
+Сформированные артефакты находятся в `outputs/`:
+
+- `processed_database_preview.json`
+- `processed_price_items_preview.csv`
+- `service_catalog_seed.json`
+- `quality_report.json`
+- `quality_report.md`
+
+Последний preview-прогон:
+
+- документов: 10
+- извлеченных позиций прайса: 8877
+- записей в справочнике услуг: 6614
+- успешная нормализация: 99.95%
+- позиций в очереди ручной проверки: 4
+
+## Проверки качества
+
+- health/API и ingestion contract tests
+- parser fixtures для XLSX, DOCX и текстового PDF
+- OCR regression helper tests и граница OCR-адаптера
+- API очереди ручной верификации
+- публикация версий цен и экспорт
+- RBAC-тесты
+- observability contract tests
+- webhook delivery tests
+
+## Локальная smoke-проверка
+
+```text
+py -m pytest tests/test_xlsx_vertical_slice.py tests/test_docx_parser.py tests/test_ingestion_api.py tests/test_api_health.py -q
+```
+
+Результат:
+
+```text
+8 passed, 1 skipped
+```
+
+Проверены XLSX, DOCX, ingestion/API и health paths. Тест текстового PDF требует optional parser extra с `fitz` / PyMuPDF в текущем окружении.
+
+## Вывод
+
+Решение закрывает ключевые требования кейса: загрузку архива, обработку разных форматов, сопоставление со справочником, ручную верификацию, историю цен, API, Swagger/OpenAPI, экспорт, вебхуки и административную панель.
